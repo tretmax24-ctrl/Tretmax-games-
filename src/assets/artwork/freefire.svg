@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" fill="none">
+  <defs><linearGradient id="night" x2=".9" y2="1"><stop stop-color="#52271f"/><stop offset=".56" stop-color="#211512"/><stop offset="1" stop-color="#0b0b09"/></linearGradient><linearGradient id="ember" x1="330" y1="90" x2="560" y2="430"><stop stop-color="#ffe2a2"/><stop offset=".45" stop-color="#f27b3d"/><stop offset="1" stop-color="#7c281f"/></linearGradient><pattern id="marks" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M0 36 36 0" stroke="#ff9a56" stroke-opacity=".11"/></pattern></defs>
+  <path fill="url(#night)" d="M0 0h900v500H0z"/><path fill="url(#marks)" d="M0 0h900v500H0z"/>
+  <path d="M0 420c120-90 161-105 250-64 53-119 84-154 155-146-10-69 15-117 64-157 1 87 39 118 63 145 12-50 41-86 88-111-14 82-2 139 53 190 56-30 119-36 227-9v232H0V420Z" fill="#0b0c0a"/>
+  <path d="M0 425c100-75 166-92 243-65m-55 117c43-120 91-215 204-258m211 275c-48-119-42-200 21-292m94 295c-11-90 22-162 95-218" stroke="#ff974c" stroke-opacity=".5" stroke-width="3"/>
+  <path d="m436 93 52-24 46 30 14 61-23 42 23 36-21 57 43 64-12 141H341l-2-114 61-82 10-72-24-58 14-58 36-23Z" fill="url(#ember)" stroke="#ffd28e" stroke-opacity=".8" stroke-width="3"/>
+  <path d="m424 131 45-22 41 23 15 39-31 33-48-4-37-28 15-41Z" fill="#201815" stroke="#ffc77e" stroke-width="3"/><path d="m408 159 38-12 65 11-15 28-34 11-48-13-6-25Z" fill="#f7b16a"/>
+  <path d="m363 290 69-44 37 16 42-20 59 48-24 44-73-10-61 20-51-22 2-32Z" fill="#b34d31" stroke="#ffd08b" stroke-opacity=".7" stroke-width="2"/><path d="M347 473 373 367l89-40 85 31 25 115H347Z" fill="#251814" stroke="#ef8146" stroke-opacity=".7" stroke-width="3"/>
+  <path d="m104 103 64-23m566 339 73-32M198 0v54m522 381v65" stroke="#ffc77e" stroke-opacity=".55" stroke-width="2"/><circle cx="461" cy="253" r="196" stroke="#ffb46e" stroke-opacity=".19" stroke-dasharray="4 12"/>
+</svg>

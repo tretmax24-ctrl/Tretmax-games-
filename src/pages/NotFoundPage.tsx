@@ -1,0 +1,2 @@
+import { Link } from 'react-router-dom'
+export function NotFoundPage() { return <section className="not-found"><div className="not-found-code">404<span>.</span></div><div className="section-kicker"><span /> WRONG TURN, PLAYER</div><h1>THIS MATCH<br /><em>DOESN'T EXIST.</em></h1><p>That page isn't in this arena. Head back and find your next move.</p><Link className="button button--lime" to="/">Back to home <span>↗</span></Link></section> }

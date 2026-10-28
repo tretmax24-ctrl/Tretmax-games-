@@ -426,3 +426,8 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Vite frontend outputs and local environment files
+dist/
+.env.local
+.env.*.local

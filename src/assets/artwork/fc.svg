@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="122" x2="782" y1="20" y2="489" gradientUnits="userSpaceOnUse"><stop stop-color="#30213F"/><stop offset=".5" stop-color="#19151F"/><stop offset="1" stop-color="#0A0A0E"/></linearGradient>
+    <linearGradient id="ball" x1="490" x2="685" y1="99" y2="340" gradientUnits="userSpaceOnUse"><stop stop-color="#F0D8FF"/><stop offset=".48" stop-color="#9F76C5"/><stop offset="1" stop-color="#513E66"/></linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0v32" stroke="#DBB6FF" stroke-opacity=".1"/></pattern>
+  </defs>
+  <path fill="url(#bg)" d="M0 0h900v500H0z"/><path fill="url(#grid)" d="M0 0h900v500H0z"/>
+  <path d="M0 410c134-82 268-123 450-123s316 41 450 123v90H0v-90Z" fill="#100D14"/>
+  <path d="M0 431c152-75 303-111 450-111s298 36 450 111" stroke="#C99EFF" stroke-opacity=".26" stroke-width="2"/>
+  <path d="M88 500V250c0-119 161-194 362-194s362 75 362 194v250" stroke="#C99EFF" stroke-opacity=".18" stroke-width="2"/>
+  <path d="M166 500V269c0-83 126-138 284-138s284 55 284 138v231" stroke="#C99EFF" stroke-opacity=".27"/>
+  <path d="M450 133v367m-284-224h568" stroke="#C99EFF" stroke-opacity=".22"/>
+  <circle cx="450" cy="309" r="116" stroke="#DCC1FF" stroke-opacity=".24"/><circle cx="450" cy="309" r="82" stroke="#DCC1FF" stroke-opacity=".2" stroke-dasharray="2 7"/>
+  <path d="m574 103 61-42 82 15 49 60-8 69-53 48-80-5-60-46-12-62 21-37Z" fill="url(#ball)" stroke="#E7D4FF" stroke-width="2"/>
+  <path d="m622 117 31 2 15 26-14 25-29 1-15-25 12-29Zm74-21 30 15 9 31-24 19-28-13-5-28 18-24Zm-60 80 30 3 11 28-21 21-31-9-9-27 20-16Zm71 28 31-4 20 21-8 29-31 8-22-18 10-36Z" fill="#44334F" fill-opacity=".8"/>
+  <path d="M633 147h36m-18-18v37M717 129l23 19M649 193l21 24" stroke="#EFE0FF" stroke-opacity=".7"/>
+  <path d="M104 85h173M623 421h173M735 63h66M97 434h80" stroke="#C99EFF" stroke-opacity=".55"/>
+  <path d="m80 165 85 52m589 95 67 41" stroke="#C99EFF" stroke-opacity=".3" stroke-width="2"/>
+</svg>
