@@ -27,6 +27,7 @@ Updated: 2026-10-28
 | Public sharing | Implemented, browser tested pending | Published detail pages provide native share when supported and an encoded WhatsApp share using the public tournament URL only. |
 | Player help/FAQ | Implemented | How It Works documents manual IDs, registration boundaries, check-in and result workflow availability. |
 | Mobile layouts | Implemented, device matrix pending | Existing responsive layout plus registration/share/FAQ refinements; viewport verification remains to be recorded. |
+| Vercel/PWA staging release | Implemented, deployment and device testing pending | `vercel.json` provides SPA rewrites; the installable manifest, branded icons and a safe static-shell service worker are included. No Vercel deployment or physical-phone test has been performed. |
 
 The checked-in core migration defines profiles, games, tournaments, player_game_accounts, tournament_entries, matches, wallet tables and payment requests. No service-role key or browser database fallback is used.
 
@@ -78,6 +79,8 @@ Phase 2 draft editing remains blocked until a reviewed Owner-only draft-edit RPC
 Commands run after this continuation:
 
 - npm run lint
+
+The staging release must be configured with the documented Vite environment variables in Vercel and the deployed HTTPS origin must be added to Supabase Auth redirect settings before browser authentication and invitation-link testing.
 - npm run build
 - npm test
 

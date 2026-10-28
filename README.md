@@ -1,11 +1,11 @@
 # Tretmax Games
 
-A React + TypeScript + Vite frontend for an esports tournament platform focused on Uganda. Tournament, player, and leaderboard records currently come from local demo data. The frontend is not connected to Supabase and does not process payments or prizes.
+React + TypeScript + Vite frontend for the Tretmax Games free-entry esports platform in Uganda. Supabase Auth, profiles, game IDs, tournament registration, teams, check-in, invitations and Owner publishing are connected where their reviewed RPCs are deployed. Payments and payouts remain disabled. Treat Vercel deployments as staging/mobile-testing releases until real-device and multi-account acceptance checks are complete.
 
 ## Prerequisites
 
 - Node.js 20 or newer
-- npm (included with Node.js)
+- npm
 
 ## Install and run
 
@@ -14,35 +14,53 @@ npm install
 npm run dev
 ```
 
-Vite prints the local URL, usually `http://localhost:5173`.
-
 ## Environment setup
 
-Copy `.env.example` to `.env.local` and replace the placeholders with your Supabase project URL and publishable key. Vite reads the `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` values on startup; restart the dev server after changing them. `.env.local` is ignored by Git. The app validates that both values are present, and shows a setup notice while they are missing. A reusable lazy client is available in `src/lib/supabase.ts`, but the app does not yet make Supabase requests or authenticate users. Use only a publishable key in browser code; never put a service role or other secret key in frontend configuration.
+Copy `.env.example` to `.env.local` and set:
+
+```text
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+VITE_SUPABASE_REGISTRATION_SUMMARY_RPC_ENABLED=true
+```
+
+The registration-summary flag should be enabled only when that reviewed RPC is deployed. Vite embeds `VITE_*` values at build time, so restart the dev server after changes. `.env.local` is ignored by Git. Never add a service-role or secret key to browser code or Vercel frontend variables.
 
 ## Routes
 
 - `/` — home
-- `/tournaments` — searchable, filterable tournament listings
-- `/tournaments/:id` — tournament details and local demo registration
-- `/games` — confirmed game entries from the existing demo data
-- `/leaderboard` — searchable sample player rankings
-- `/how-it-works` — product flow and backend boundaries
-- `/login` and `/register` — local validation demos; no accounts are created
-- `/profile` — unsigned-in profile preview
-- `/admin` — development-only operations dashboard preview; unavailable in production until Supabase Auth and server-side authorization are implemented
-- Unmatched paths display a branded not-found page.
+- `/tournaments` and `/tournaments/:id` — published discovery, details, free registration, team registration and check-in where authorized
+- `/games` — supported games and artwork
+- `/leaderboard` — sample ranking presentation until verified rankings exist
+- `/how-it-works` — player guidance and backend boundaries
+- `/login` and `/register` — Supabase Auth
+- `/profile` — authenticated profile, game IDs, teams and invitations
+- `/teams/join#code=...` — private one-use team invitation redemption
+- `/admin` — trusted-role operations dashboard
 
-## Admin dashboard preview
+## Vercel staging release
 
-Run `npm run dev` and open `/admin`. The role selector changes navigation visibility only in the current page memory; it does not authenticate or grant access. The preview uses existing tournament demo fixtures and empty states for backend-dependent records. Admin actions do not change live data, and the production build blocks the dashboard pending secure authentication and server-side authorization. See [docs/admin-security.md](./docs/admin-security.md) for the first Owner provisioning plan and future security requirements. The core Supabase migration is not modified by this frontend preview.
+Vercel detects Vite automatically. Use the repository root, `npm install` as Install Command, `npm run build` as Build Command, and `dist` as Output Directory. [vercel.json](./vercel.json) rewrites direct SPA routes such as `/profile`, `/tournaments/...`, `/admin` and `/teams/join` to `index.html` while preserving React Router navigation.
 
-## Checks and production build
+Add these Environment Variables in Vercel Preview (and separately in Production only when ready):
+
+```text
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+VITE_SUPABASE_REGISTRATION_SUMMARY_RPC_ENABLED=true
+```
+
+After changing variables, redeploy. In Supabase Dashboard → Authentication → URL Configuration, add the Vercel HTTPS origin to Site URL/Redirect URLs, for example `https://your-staging-domain.vercel.app/**`, while retaining the local URL for development. Verify email confirmation and sign-out on the deployed domain. Invitation links use URL fragments and remove the code from the visible URL before preview.
+
+The PWA manifest and icons are served from `public/`. The service worker caches only the static shell/assets and skips Supabase Auth, REST, Storage and Functions paths; private profile, team, invitation, registration and attendance responses are not cached.
+
+## Checks and preview
 
 ```sh
+npm test
 npm run lint
 npm run build
 npm run preview
 ```
 
-`build` runs TypeScript project checks and produces the production bundle in `dist/`. `preview` serves that bundle locally.
+No production deployment or phone testing is claimed by this repository change. Payments remain disabled and admin access continues to depend on Supabase Auth metadata plus database authorization.
