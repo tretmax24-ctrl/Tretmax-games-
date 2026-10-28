@@ -15,15 +15,19 @@ This reconciled roadmap reflects the current repository and the launch architect
 
 - Public free-entry registration calls the reviewed/deployed `register_for_tournament` RPC; a signed-in end-to-end success test is still outstanding.
 - Public sharing, player guidance and responsive polish are implemented in the frontend.
-- Team/check-in contracts and honest unavailable states are now prepared without adding client persistence.
+- Deployed team/check-in contracts are connected through RPC-only frontend flows; browser verification with multiple real accounts remains pending.
+- Competition engine algorithms are implemented and tested locally. Admin bracket preview is intentionally unsaved until secure match RPCs are deployed.
 
 ## Next backend-gated phases
 
 1. Run signed-in registration duplicate/full/deadline tests against the deployed RPC.
-2. Review and deploy team tables/RPCs, roster locking and team registration.
-3. Deploy reviewed check-in, attendance and no-show operations.
-4. Add reviewed bracket, match-result and dispute RPCs.
+2. Run distinct-user browser tests for team lifecycle, team registration, check-in and capacity.
+3. Add reviewed bracket, match-result and dispute RPCs.
 5. Add verified completion, winners, rankings and notifications.
 6. Complete production security, observability and device testing.
+
+### Competition backend gate
+
+Before enabling live brackets, review and deploy the bracket, match-result, evidence, dispute, forfeit and completion contracts in [api-contracts.md](./api-contracts.md), with the non-applied schema proposal in [migrations-needed.md](./migrations-needed.md). The frontend must then replace the local preview with authorized reads and RPC calls.
 
 No migration, RLS policy or payment flow is changed by this roadmap update.

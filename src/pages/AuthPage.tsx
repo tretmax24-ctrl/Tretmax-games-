@@ -11,7 +11,8 @@ function messageFor(error: unknown) {
 }
 
 export function AuthPage() {
-  const isRegister = useLocation().pathname === '/register'
+  const location = useLocation()
+  const isRegister = location.pathname === '/register'
   const navigate = useNavigate()
   const { user, loading: sessionLoading } = useAuth()
   const [email, setEmail] = useState('')
@@ -46,14 +47,16 @@ export function AuthPage() {
         })
         if (error) throw error
         if (data.session) {
-          navigate('/profile', { replace: true })
+          const destination = (location.state as { returnTo?: string; inviteCode?: string } | null)?.returnTo ?? '/profile'
+          navigate(destination, { replace: true, state: { inviteCode: (location.state as { inviteCode?: string } | null)?.inviteCode } })
         } else {
           setMessage('Account created. Check your email to confirm your address before signing in.')
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
         if (error) throw error
-        navigate('/profile', { replace: true })
+        const destination = (location.state as { returnTo?: string; inviteCode?: string } | null)?.returnTo ?? '/profile'
+        navigate(destination, { replace: true, state: { inviteCode: (location.state as { inviteCode?: string } | null)?.inviteCode } })
       }
     } catch (error) {
       setErrors([messageFor(error)])

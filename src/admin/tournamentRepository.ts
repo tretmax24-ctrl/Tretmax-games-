@@ -5,6 +5,7 @@ import type { TournamentDraftInput } from './tournamentDrafts'
 export type SupabaseGame = Game & { slug: string; databaseId: string }
 export type TournamentRecord = Tournament & {
   gameName: string
+  databaseGameId: string
   bannerUrl: string | null
   prizeDescription: string | null
   isDatabaseRecord: true
@@ -57,6 +58,7 @@ export async function listActiveGames(): Promise<SupabaseGame[]> {
 }
 
 const tournamentFields = 'id, game_id, title, description, format, status, starts_at, registration_opens_at, registration_closes_at, check_in_opens_at, check_in_closes_at, max_players, entry_fee_minor, prize_pool_minor, currency_code, created_by, mode, player_format, rules, prize_description, banner_url, games(slug, name)'
+const registrationSummaryRpcEnabled = import.meta.env.VITE_SUPABASE_REGISTRATION_SUMMARY_RPC_ENABLED === 'true'
 
 function toTournament(row: TournamentRow): TournamentRecord {
   const slug = row.games?.slug ?? ''
@@ -78,6 +80,7 @@ function toTournament(row: TournamentRow): TournamentRecord {
   return {
     id: row.id,
     gameId: slug,
+    databaseGameId: row.game_id,
     gameName: row.games?.name ?? 'Game unavailable',
     title: row.title,
     format: [row.player_format, row.mode, row.format.replaceAll('_', ' ')].filter(Boolean).join(' · '),
@@ -105,7 +108,16 @@ export async function listPublishedTournaments(): Promise<TournamentRecord[]> {
     .in('status', ['registration_open', 'registration_closed', 'check_in', 'in_progress', 'completed'])
     .order('starts_at', { ascending: true })
   if (error) throw error
-  return ((data ?? []) as unknown as TournamentRow[]).map(toTournament)
+  const records = ((data ?? []) as unknown as TournamentRow[]).map(toTournament)
+  if (!registrationSummaryRpcEnabled) return records
+  return Promise.all(records.map(async record => {
+    try {
+      const summary = await getTournamentRegistrationSummary(record.id)
+      return { ...record, registeredCount: summary.registeredCount, slotsRemaining: summary.slotsRemaining, capacity: summary.maxPlayers }
+    } catch {
+      return record
+    }
+  }))
 }
 
 export async function getPublishedTournament(id: string): Promise<TournamentRecord | null> {
@@ -134,8 +146,71 @@ export type RegistrationResult = {
   code: string
   message: string
   entry_id?: string
+  slot_number?: number
   status?: string
   slots_remaining?: number
+  registered_count?: number
+  max_players?: number
+}
+
+export type PlayerTournamentRegistration = {
+  entryId: string
+  tournamentId: string
+  status: string
+  seed: number | null
+  registeredAt: string
+  tournament: TournamentRecord | null
+}
+
+export type TournamentRegistrationSummary = {
+  tournamentId: string
+  registeredCount: number
+  maxPlayers: number
+  slotsRemaining: number
+}
+
+type EntryRow = { id: string; tournament_id: string; status: string; seed: number | null; slot_number: number | null; registered_at: string; game_account_id: string | null }
+
+function toRegistration(row: EntryRow, tournament: TournamentRecord | null): PlayerTournamentRegistration {
+  return { entryId: row.id, tournamentId: row.tournament_id, status: row.status, seed: row.slot_number ?? row.seed, registeredAt: row.registered_at, tournament }
+}
+
+export async function getMyTournamentRegistration(tournamentId: string): Promise<PlayerTournamentRegistration | null> {
+  const supabase = getSupabaseClient()
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError) throw authError
+  if (!authData.user) return null
+  const { data, error } = await supabase.from('tournament_entries').select('id, tournament_id, status, seed, slot_number, registered_at, game_account_id').eq('user_id', authData.user.id).eq('tournament_id', tournamentId).maybeSingle()
+  if (error) throw error
+  return data ? toRegistration(data as EntryRow, null) : null
+}
+
+export async function listMyTournamentRegistrations(): Promise<PlayerTournamentRegistration[]> {
+  const supabase = getSupabaseClient()
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError) throw authError
+  if (!authData.user) return []
+  const { data: entries, error: entriesError } = await supabase.from('tournament_entries').select('id, tournament_id, status, seed, slot_number, registered_at, game_account_id').eq('user_id', authData.user.id).order('registered_at', { ascending: false })
+  if (entriesError) throw entriesError
+  const rows = (entries ?? []) as EntryRow[]
+  const ids = [...new Set(rows.map(row => row.tournament_id))]
+  if (!ids.length) return []
+  const { data: tournaments, error: tournamentsError } = await supabase.from('tournaments').select(tournamentFields).in('id', ids)
+  if (tournamentsError) throw tournamentsError
+  const byId = new Map(((tournaments ?? []) as unknown as TournamentRow[]).map(row => [row.id, toTournament(row)]))
+  return rows.map(row => toRegistration(row, byId.get(row.tournament_id) ?? null))
+}
+
+/**
+ * Reserved for a reviewed read-only aggregate RPC. It is intentionally not
+ * called by public pages until Supabase deploys the documented contract.
+ */
+export async function getTournamentRegistrationSummary(tournamentId: string): Promise<TournamentRegistrationSummary> {
+  const { data, error } = await getSupabaseClient().rpc('get_tournament_registration_summary', { p_tournament_id: tournamentId })
+  if (error) throw error
+  const result = data as { ok?: boolean; code?: string; message?: string; tournament_id?: string; registered_count?: number; max_players?: number; slots_remaining?: number } | null
+  if (!result?.ok || typeof result.registered_count !== 'number' || typeof result.max_players !== 'number' || typeof result.slots_remaining !== 'number') throw new Error(result?.message || 'The tournament count service returned an invalid response.')
+  return { tournamentId: result.tournament_id ?? tournamentId, registeredCount: result.registered_count, maxPlayers: result.max_players, slotsRemaining: result.slots_remaining }
 }
 
 export async function listMyTournamentDrafts(): Promise<{ userId: string; drafts: OwnedTournamentDraft[] }> {
@@ -154,6 +229,16 @@ export async function listMyTournamentDrafts(): Promise<{ userId: string; drafts
     userId: authData.user.id,
     drafts: ((data ?? []) as unknown as TournamentRow[]).map(row => ({ ...toTournament(row), createdBy: authData.user.id })),
   }
+}
+
+export async function listOwnedTournamentOperations(): Promise<{ userId: string; tournaments: TournamentRecord[] }> {
+  const supabase = getSupabaseClient()
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError) throw authError
+  if (!authData.user) return { userId: '', tournaments: [] }
+  const { data, error } = await supabase.from('tournaments').select(tournamentFields).eq('created_by', authData.user.id).in('status', ['registration_open', 'registration_closed', 'check_in', 'in_progress']).order('starts_at', { ascending: true })
+  if (error) throw error
+  return { userId: authData.user.id, tournaments: ((data ?? []) as unknown as TournamentRow[]).map(toTournament) }
 }
 
 export async function registerForTournament(tournamentId: string, gameAccountId: string): Promise<RegistrationResult> {

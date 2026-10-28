@@ -12,6 +12,6 @@ The repository is an existing React + TypeScript + Vite app. Routing is defined 
 
 ## Boundaries
 
-The checked-in migrations in this checkout do not include the newly deployed registration migration, but Supabase has deployed and tested `public.register_for_tournament` through `20261028135017_secure_free_solo_tournament_registration.sql`. The client calls that RPC and does not fall back to direct inserts or browser state. Teams, check-in, matches, disputes, winner completion, notifications and payout execution remain backend work.
+The checked-in migrations include deployed solo registration, team lifecycle, opaque invitation-code and check-in operations. The client calls those RPCs and does not fall back to direct inserts or browser state. The registration-summary and team-attendance-summary reads are consumed through their documented contracts. Brackets, matches, disputes, winner completion, notifications and payout execution remain backend work. Real browser verification with distinct accounts is still outstanding for the newest team invite and attendance flows.
 
 The handoff package referenced in the continuation request was absent, so this finding is reconciled from the master specification, checked-in migrations and current source.

@@ -1,6 +1,6 @@
 # Tretmax Games — Teams and Tournament Check-in Backend
 
-Status: deployed to Supabase project `mlwtwvmaograsecxegoq` on 2026-10-28. **Backend tested using SQL transaction fixtures and simulated JWT request settings; browser/real-token end-to-end integration is not yet tested.** Existing solo registration and public capacity RPCs remain in use.
+Status: deployed to Supabase project `mlwtwvmaograsecxegoq` on 2026-10-28. Frontend RPC integration is now implemented, but **browser/real-token end-to-end integration remains pending**. Backend tests used SQL transaction fixtures and simulated JWT request settings; they do not replace multi-account browser tests. Existing solo registration and public capacity RPCs remain in use.
 
 ## Calling convention
 
@@ -62,4 +62,4 @@ const checked = await supabase.rpc('check_in_tournament', { p_tournament_id: tou
 
 Passed PostgreSQL transaction tests: create/invite/accept/decline/reinvite/leave/transfer/lock; invalid invitation/game, duplicate and locked-roster denials; valid Duo registration as a single slot with two private player claims; duplicate and paid/expired/closed/wrong-game/wrong-size/full/solo-format denials; solo registration compatibility and capacity summary; authorized and unauthorized team member attendance; partial and full team check-in; solo check-in, replay and early deadline denials; Owner assignment of a referee; unauthorized referee and premature no-show denials; authorized post-deadline no-show, replay and audit; RLS privacy, grants and existing-row preservation.
 
-**Not yet done:** browser integration, real user-token HTTP tests, and independent simultaneously overlapping transaction stress tests. The migrations use tournament-row FOR UPDATE serialization, team-row FOR UPDATE and unique indexes as concurrency safeguards; do not claim stress-tested behavior from sequential test sessions. For a live production rollout, implement frontend invitation/roster/team registration/check-in UI and test with distinct signed-in users. No test fixtures were retained.
+**Not yet done:** browser integration, real user-token HTTP tests, and independent simultaneously overlapping transaction stress tests. The migrations use tournament-row FOR UPDATE serialization, team-row FOR UPDATE and unique indexes as concurrency safeguards; do not claim stress-tested behavior from sequential test sessions. Frontend team, registration and check-in flows now call these RPCs, but must be tested with distinct signed-in captain, invitee, player and Owner accounts. Invitee discovery intentionally requires a known account UUID because no secure player-search operation is deployed. No test fixtures were retained.

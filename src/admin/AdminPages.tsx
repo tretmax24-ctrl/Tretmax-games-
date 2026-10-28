@@ -5,6 +5,9 @@ import { AdminPageHeading } from './AdminLayout'
 import { useAdminContext } from './AdminContext'
 import { hasPermission } from './permissions'
 import { CreateTournamentDialog } from './CreateTournamentDialog'
+import { BracketPreview } from './BracketPreview'
+import { listOwnedTournamentOperations } from './tournamentRepository'
+import { openTournamentCheckIn } from './teamRepository'
 import type { OwnedTournamentDraft } from './tournamentRepository'
 import type { TournamentDraftInput } from './tournamentDrafts'
 
@@ -134,7 +137,16 @@ export function AdminPlayers() {
 
 export function AdminMatches() {
   const [tab, setTab] = useState('All queue')
-  return <><AdminPageHeading eyebrow="OPERATIONS / MATCHES" title="Result review" description="Review evidence and disputes with a traceable referee workflow."><PageActions label="Open review queue" /></AdminPageHeading><Notice tone="warning">Match verification is unavailable until assigned referee permissions, evidence storage, and an auditable server-side decision flow are implemented.</Notice><div className="admin-tabs" role="tablist" aria-label="Match queue filters">{['All queue', 'Evidence review', 'Disputes'].map(item => <button role="tab" aria-selected={tab === item} className={tab === item ? 'selected' : ''} onClick={() => setTab(item)} key={item}>{item}</button>)}</div><EmptyTable title="No matches in this queue" note={`${tab} has no connected records. No results will be verified in this preview.`} columns={['MATCH', 'TOURNAMENT', 'PLAYERS', 'EVIDENCE', 'STATUS', 'ACTION']} /></>
+  const { role } = useAdminContext()
+  const canOpen = role === 'owner' || role === 'tournament_manager'
+  const [operations, setOperations] = useState<OwnedTournamentDraft[]>([])
+  const [operationState, setOperationState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [operationError, setOperationError] = useState('')
+  const [busy, setBusy] = useState('')
+  const [message, setMessage] = useState('')
+  useEffect(() => { let active = true; listOwnedTournamentOperations().then(result => { if (active) { setOperations(result.tournaments as OwnedTournamentDraft[]); setOperationState('ready') } }).catch(reason => { if (active) { setOperationError(reason instanceof Error ? reason.message : 'Tournament operations could not be loaded.'); setOperationState('error') } }); return () => { active = false } }, [])
+  async function openCheckIn(tournamentId: string) { setBusy(tournamentId); setOperationError(''); setMessage(''); try { const result = await openTournamentCheckIn(tournamentId); if (!result.ok) { setOperationError(`${result.code}: ${result.message}`); return } setMessage(result.message); const refreshed = await listOwnedTournamentOperations(); setOperations(refreshed.tournaments as OwnedTournamentDraft[]) } catch (reason) { setOperationError(reason instanceof Error ? reason.message : 'Check-in could not be opened.') } finally { setBusy('') } }
+  return <><AdminPageHeading eyebrow="OPERATIONS / MATCHES" title="Result review" description="Review evidence and disputes with a traceable referee workflow."><PageActions label="Open review queue" /></AdminPageHeading><Notice tone="warning">Match verification, evidence, brackets and disputes remain unavailable until their reviewed RPCs are deployed. Check-in opening is connected for authorized event owners and tournament managers.</Notice><div className="admin-tabs" role="tablist" aria-label="Match queue filters">{['All queue', 'Evidence review', 'Disputes'].map(item => <button role="tab" aria-selected={tab === item} className={tab === item ? 'selected' : ''} onClick={() => setTab(item)} key={item}>{item}</button>)}</div><EmptyTable title="No matches in this queue" note={`${tab} has no connected records. No results will be verified in this preview.`} columns={['MATCH', 'TOURNAMENT', 'PLAYERS', 'EVIDENCE', 'STATUS', 'ACTION']} />{canOpen && <section className="admin-panel admin-checkin-operations"><div className="admin-panel-kicker">CHECK-IN CONTROL <span className="admin-demo-tag">SERVER RPC</span></div>{message && <p className="admin-draft-success" role="status">{message}</p>}{operationError && <p className="admin-record-error" role="alert">{operationError}</p>}{operationState === 'loading' ? <p className="admin-inline-empty">Loading your owned tournament operations…</p> : operationState === 'error' ? <p className="admin-inline-empty">{operationError}</p> : operations.length === 0 ? <p className="admin-inline-empty">No owned published tournaments are ready for check-in.</p> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>TOURNAMENT</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{operations.map(item => <tr key={item.id}><td>{item.title}</td><td>{item.status}</td><td><button className="admin-button secondary" type="button" disabled={busy !== '' || item.status !== 'Registration open' || item.entryFee > 0} title={item.entryFee > 0 ? 'Paid check-in is disabled.' : undefined} onClick={() => openCheckIn(item.id)}>{busy === item.id ? 'Opening…' : item.status === 'Check in' ? 'Open' : 'Open check-in'}</button></td></tr>)}</tbody></table></div>}</section>}<BracketPreview /></>
 }
 
 export function AdminFinance() {

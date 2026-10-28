@@ -13,6 +13,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { TournamentDetailPage } from './pages/TournamentDetailPage'
 import { TournamentsPage } from './pages/TournamentsPage'
+import { TeamInvitePage } from './pages/TeamInvitePage'
 import { AuthProvider } from './lib/AuthContext'
 
 function RoutedPage({ children }: { children: ReactNode }) { return <PageShell>{children}</PageShell> }
@@ -28,6 +29,7 @@ export default function App() {
     <Route path="/login" element={<RoutedPage><AuthPage /></RoutedPage>} />
     <Route path="/register" element={<RoutedPage><AuthPage /></RoutedPage>} />
     <Route path="/profile" element={<RoutedPage><ProfilePage /></RoutedPage>} />
+    <Route path="/teams/join" element={<RoutedPage><TeamInvitePage /></RoutedPage>} />
     <Route path="/admin" element={<AdminLayout />}>
       <Route index element={<AdminPermissionGate permission="dashboard.view"><AdminOverview /></AdminPermissionGate>} />
       <Route path="tournaments" element={<AdminPermissionGate permission="tournaments.read"><AdminTournaments /></AdminPermissionGate>} />

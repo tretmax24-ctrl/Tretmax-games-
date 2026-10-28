@@ -7,8 +7,10 @@ import { gameForSlug, ugx } from '../data/tournaments'
 import { loadPlayerProfile } from '../lib/playerProfile'
 import { useAuth } from '../lib/auth'
 import type { PlayerGameAccount } from '../lib/playerProfile'
-import type { TournamentRecord } from '../admin/tournamentRepository'
+import { getMyTournamentRegistration, getTournamentRegistrationSummary, type PlayerTournamentRegistration, type TournamentRecord } from '../admin/tournamentRepository'
 import { CompetitionParticipationPanel } from '../components/CompetitionParticipationPanel'
+import { TeamTournamentPanel } from '../components/TeamTournamentPanel'
+import { CheckInPanel } from '../components/CheckInPanel'
 
 export function TournamentDetailPage() {
   const { id } = useParams()
@@ -23,6 +25,9 @@ export function TournamentDetailPage() {
   const [selectedAccount, setSelectedAccount] = useState('')
   const [rulesAccepted, setRulesAccepted] = useState(false)
   const [shareMessage, setShareMessage] = useState('')
+  const [myRegistration, setMyRegistration] = useState<PlayerTournamentRegistration | null>(null)
+  const [registeredCount, setRegisteredCount] = useState<number | null>(null)
+  const [slotsRemaining, setSlotsRemaining] = useState<number | null>(null)
   useEffect(() => {
     let current = true
     setTournament(null)
@@ -54,6 +59,24 @@ export function TournamentDetailPage() {
     return () => { current = false }
   }, [user, tournament])
 
+  useEffect(() => {
+    if (!tournament) return
+    let current = true
+    setMyRegistration(null)
+    if (import.meta.env.VITE_SUPABASE_REGISTRATION_SUMMARY_RPC_ENABLED !== 'true') {
+      setRegisteredCount(null)
+      setSlotsRemaining(null)
+    } else getTournamentRegistrationSummary(tournament.id).then(summary => {
+      if (!current) return
+      setRegisteredCount(summary.registeredCount)
+      setSlotsRemaining(summary.slotsRemaining)
+    }).catch(() => {
+      if (current) { setRegisteredCount(null); setSlotsRemaining(null) }
+    })
+    if (user) getMyTournamentRegistration(tournament.id).then(registration => { if (current) setMyRegistration(registration) }).catch(() => { if (current) setMyRegistration(null) })
+    return () => { current = false }
+  }, [user, tournament])
+
   async function submitRegistration(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!tournament || !selectedAccount || !rulesAccepted || registrationState === 'submitting') return
@@ -64,6 +87,9 @@ export function TournamentDetailPage() {
       const result = await registerForTournament(tournament.id, selectedAccount)
       if (!result.ok) { setRegistrationState('error'); setRegistrationMessage(`${result.code}: ${result.message}`); return }
       setRegistrationState('success')
+      setMyRegistration({ entryId: result.entry_id ?? '', tournamentId: tournament.id, status: result.status ?? 'registered', seed: result.slot_number ?? null, registeredAt: new Date().toISOString(), tournament })
+      if (typeof result.registered_count === 'number') setRegisteredCount(result.registered_count)
+      if (typeof result.slots_remaining === 'number') setSlotsRemaining(result.slots_remaining)
       setRegistrationMessage(`${result.message || 'Registration confirmed.'}${typeof result.slots_remaining === 'number' ? ` ${result.slots_remaining} slots remaining.` : ''}`)
     } catch (reason) {
       setRegistrationState('error')
@@ -124,13 +150,15 @@ export function TournamentDetailPage() {
     <div className="detail-hero"><GameArtwork game={selectedGame} bannerUrl={tournament.bannerUrl} /><div className="detail-hero-copy"><span className={`status status--${isOpen ? 'open' : tournament.status === 'In progress' ? 'live' : 'soon'}`}>{tournament.status}</span><PageHeading kicker={selectedGame.name} title={tournament.title.toUpperCase()} copy={tournament.description || 'Tournament details will be updated by the organizer.'}/><div className="detail-meta"><span>{tournament.format}</span><span>{tournament.dateLabel}</span></div><a className="button button--lime" href="#registration-status">Registration information <span>â†“</span></a></div></div>
     <div className="detail-layout"><div className="detail-main">
       <DemoNotice>Live tournament information is read from Supabase. Free registration uses a server-validated RPC; paid registration, payment verification and prize payouts are not implemented.</DemoNotice>
-      <section className="detail-section"><div className="section-kicker"><span /> EVENT DETAILS</div><div className="detail-stats"><div><span>ENTRY TYPE</span><strong>{tournament.entryFee > 0 ? 'Paid entry' : 'Free entry'}</strong></div><div><span>ENTRY FEE</span><strong>{ugx(tournament.entryFee)}</strong></div><div><span>PRIZE POOL</span><strong className="prize">{ugx(tournament.prizePool, 'UGX 0')}</strong></div><div><span>MAX SLOTS</span><strong>{tournament.capacity || 'Not published'}</strong></div></div><p className="small-note">Confirmed registration counts appear only after the registration service reports them; no slot count is estimated here.</p></section>
+      <section className="detail-section"><div className="section-kicker"><span /> EVENT DETAILS</div><div className="detail-stats"><div><span>ENTRY TYPE</span><strong>{tournament.entryFee > 0 ? 'Paid entry' : 'Free entry'}</strong></div><div><span>ENTRY FEE</span><strong>{ugx(tournament.entryFee)}</strong></div><div><span>PRIZE POOL</span><strong className="prize">{ugx(tournament.prizePool, 'UGX 0')}</strong></div><div><span>REGISTERED / MAX</span><strong>{registeredCount === null ? `— / ${tournament.capacity || '—'}` : `${registeredCount} / ${tournament.capacity || '—'}`}</strong></div></div><p className="small-note">{slotsRemaining === null ? 'Live participant counts are unavailable until the reviewed aggregate read operation is deployed.' : `${slotsRemaining} slot${slotsRemaining === 1 ? '' : 's'} remaining.`}</p></section>
       <section className="detail-section"><div className="section-kicker"><span /> REGISTRATION WINDOW · EAST AFRICA TIME</div><div className="schedule-list"><div><time>{formatWindow(tournament.registrationClosesAt)}</time><span>Registration closes</span></div></div></section>
       <section className="detail-section"><div className="section-kicker"><span /> FORMAT & RULES</div><h2>{tournament.format}</h2>{tournament.rules.length ? <ol className="rule-list">{tournament.rules.map((rule, index) => <li key={`${index}-${rule}`}>{rule}</li>)}</ol> : <p className="small-note">No rules have been published for this tournament.</p>}</section>
       <section className="detail-section"><div className="section-kicker"><span /> SCHEDULE Â· EAST AFRICA TIME</div>{tournament.schedule.length ? <div className="schedule-list">{tournament.schedule.map(item => <div key={`${item.label}-${item.time}`}><time>{item.time}</time><span>{item.label}</span></div>)}</div> : <p className="small-note">The organizer has not published a schedule yet.</p>}</section>
       <section className="detail-section"><div className="section-kicker"><span /> PRIZE STRUCTURE</div><p>{tournament.prizeDescription || 'Prize details have not been provided.'}</p><p className="small-note">Any displayed prize pool is tournament information only. Payments, verification and payouts are unavailable.</p></section>
+      {isTeamEvent && user && tournament.entryFee === 0 && <TeamTournamentPanel tournamentId={tournament.id} gameId={tournament.databaseGameId} format={tournament.format} isOpen={isOpen} />}
+      {user && tournament.entryFee === 0 && <CheckInPanel tournamentId={tournament.id} entryId={myRegistration?.entryId} isTeamEvent={isTeamEvent} status={tournament.status} />}
       <CompetitionParticipationPanel isTeamEvent={isTeamEvent} status={tournament.status} />
-    </div><aside className="register-panel" id="registration-status"><div className="section-kicker"><span /> TOURNAMENT ACCESS</div><h2>{isOpen ? <>REGISTRATION<br /><em>OPEN.</em></> : <>EVENT<br /><em>DETAILS.</em></>}</h2>{isOpen && tournament.entryFee === 0 && isTeamEvent && <p>Team registration is not enabled yet. This event cannot accept team rosters until the reviewed team workflow is deployed.</p>}{isOpen && tournament.entryFee === 0 && !isTeamEvent && user && <form className="registration-form" onSubmit={submitRegistration}><label>GAME ACCOUNT<select value={selectedAccount} onChange={event => setSelectedAccount(event.target.value)} disabled={accountsLoading || registrationState === 'submitting'}><option value="">{accountsLoading ? 'Loading linked IDs…' : accounts.length ? 'Choose your in-game ID' : 'No linked ID for this game'}</option>{accounts.map(account => <option value={account.id} key={account.id}>{account.inGameName || 'Unnamed'} · {account.gameUid}</option>)}</select></label><label className="registration-check"><input type="checkbox" checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /> I accept the tournament rules.</label><button className="button button--lime" type="submit" disabled={!selectedAccount || !rulesAccepted || accountsLoading || registrationState === 'submitting'}>{registrationState === 'submitting' ? 'REGISTERING…' : 'REGISTER FOR FREE'}</button>{registrationState === 'success' && <p className="form-success" role="status">{registrationMessage}</p>}{registrationState === 'error' && <p className="form-errors" role="alert">{registrationMessage}</p>}{!accountsLoading && !accounts.length && <p className="small-note">Link a game ID for {tournament.gameName} in your <Link to="/profile">profile</Link> before registering.</p>}</form>}{isOpen && tournament.entryFee === 0 && !isTeamEvent && !user && <p>Sign in to register with your linked game ID.</p>}{isOpen && tournament.entryFee > 0 && <p>Paid registration is not available. This event cannot accept paid entries until payment integration is enabled.</p>}{!isOpen && <p>Current status: {tournament.status}.</p>}<div className="share-actions" aria-label="Share tournament"><button className="button button--outline" type="button" onClick={shareTournament}>Share tournament</button><button className="button button--outline" type="button" onClick={shareWhatsApp}>Share on WhatsApp</button>{shareMessage && <p className="small-note" role="status">{shareMessage}</p>}</div><Link className="button button--outline" to="/how-it-works">How tournaments work <span>â†—</span></Link>{!user && <p className="register-foot"><Link to="/login">Sign in with Supabase Auth</Link> to register.</p>}</aside></div>
+    </div><aside className="register-panel" id="registration-status"><div className="section-kicker"><span /> TOURNAMENT ACCESS</div><h2>{isOpen ? <>REGISTRATION<br /><em>OPEN.</em></> : <>EVENT<br /><em>DETAILS.</em></>}</h2>{myRegistration && <div className="registration-confirmed" role="status"><strong>REGISTERED</strong><span>{myRegistration.seed ? `Slot ${myRegistration.seed}` : 'Your slot will be assigned by the tournament workflow.'}</span></div>}{isOpen && tournament.entryFee === 0 && isTeamEvent && <p>Team registration is not enabled yet. This event cannot accept team rosters until the reviewed team workflow is deployed.</p>}{isOpen && tournament.entryFee === 0 && !isTeamEvent && user && !myRegistration && <form className="registration-form" onSubmit={submitRegistration}><label>GAME ACCOUNT<select value={selectedAccount} onChange={event => setSelectedAccount(event.target.value)} disabled={accountsLoading || registrationState === 'submitting'}><option value="">{accountsLoading ? 'Loading linked IDs…' : accounts.length ? 'Choose your in-game ID' : 'No linked ID for this game'}</option>{accounts.map(account => <option value={account.id} key={account.id}>{account.inGameName || 'Unnamed'} · {account.gameUid}</option>)}</select></label><label className="registration-check"><input type="checkbox" checked={rulesAccepted} onChange={event => setRulesAccepted(event.target.checked)} /> I accept the tournament rules.</label><button className="button button--lime" type="submit" disabled={!selectedAccount || !rulesAccepted || accountsLoading || registrationState === 'submitting' || slotsRemaining === 0}>{registrationState === 'submitting' ? 'REGISTERING…' : slotsRemaining === 0 ? 'TOURNAMENT FULL' : 'REGISTER FOR FREE'}</button>{registrationState === 'success' && <p className="form-success" role="status">{registrationMessage}</p>}{registrationState === 'error' && <p className="form-errors" role="alert">{registrationMessage}</p>}{!accountsLoading && !accounts.length && <p className="small-note">Link a game ID for {tournament.gameName} in your <Link to="/profile">profile</Link> before registering.</p>}</form>}{isOpen && tournament.entryFee === 0 && !isTeamEvent && !user && <p>Sign in to register with your linked game ID.</p>}{isOpen && tournament.entryFee > 0 && <p>Paid registration is not available. This event cannot accept paid entries until payment integration is enabled.</p>}{!isOpen && <p>Current status: {tournament.status}.</p>}<div className="share-actions" aria-label="Share tournament"><button className="button button--outline" type="button" onClick={shareTournament}>Share tournament</button><button className="button button--outline" type="button" onClick={shareWhatsApp}>Share on WhatsApp</button>{shareMessage && <p className="small-note" role="status">{shareMessage}</p>}</div><Link className="button button--outline" to="/how-it-works">How tournaments work <span>â†—</span></Link>{!user && <p className="register-foot"><Link to="/login">Sign in with Supabase Auth</Link> to register.</p>}</aside></div>
   </div>
 }
 
