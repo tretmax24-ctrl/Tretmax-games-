@@ -1,9 +1,11 @@
+import type { PlayerFormat } from './tournamentFormats'
+
 export type TournamentDraftInput = {
   title: string
   description: string
   gameId: string
   mode: string
-  playerFormat: string
+  playerFormat: PlayerFormat
   bracketFormat: string
   entryType: 'free' | 'paid'
   entryFeeMinor: number

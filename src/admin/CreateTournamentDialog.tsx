@@ -4,15 +4,11 @@ import { GameArtwork } from '../components/GameArtwork'
 import { getSupabaseClient } from '../lib/supabase'
 import type { SupabaseGame } from './tournamentRepository'
 import type { TournamentDraftInput } from './tournamentDrafts'
-
+import { playerFormatsForGame } from './tournamentFormats'
+import type { PlayerFormat } from './tournamentFormats'
 const emptyForm: TournamentDraftInput = {
   title: '', description: '', gameId: '', mode: '', playerFormat: 'Solo', bracketFormat: 'Single elimination', entryType: 'free', entryFeeMinor: 0, prizePoolMinor: 0, capacity: 32,
   registrationOpensAt: '', registrationClosesAt: '', checkInOpensAt: '', checkInClosesAt: '', start: '', rules: [], prizeDescription: '', bannerUrl: '',
-}
-
-const playerFormatsByGame: Record<string, string[]> = {
-  codm: ['Solo', 'Duo', 'Team / squad'], freefire: ['Solo', 'Duo', 'Team / squad'], fc25: ['Solo'],
-  efootball: ['Solo'], '8ballpool': ['Solo'], chess: ['Solo'], pubgm: ['Solo', 'Duo', 'Team / squad'],
 }
 
 function errorMessage(error: unknown) {
@@ -63,7 +59,7 @@ export function CreateTournamentDialog({ onClose, onSave }: { onClose: () => voi
   }, [onClose, submitting])
 
   const chosenGame = availableGames.find(game => game.slug === form.gameId)
-  const playerFormats = playerFormatsByGame[chosenGame?.id ?? ''] ?? ['Solo']
+  const playerFormats = playerFormatsForGame(chosenGame?.slug ?? form.gameId, form.mode)
   const bracketFormats = chosenGame?.category === 'Battle royale'
     ? ['Single elimination', 'Double elimination', 'Round robin', 'Battle royale']
     : ['Single elimination', 'Double elimination', 'Round robin']
@@ -79,10 +75,11 @@ export function CreateTournamentDialog({ onClose, onSave }: { onClose: () => voi
     const starts = new Date(form.start).getTime()
     if (form.title.trim().length < 3) return setError('Enter a tournament name with at least 3 characters.')
     if (!form.description.trim() || !form.mode.trim() || !form.gameId || !form.playerFormat || !form.bracketFormat) return setError('Complete all required tournament details.')
-    if (!Number.isInteger(form.capacity) || form.capacity < 2 || form.capacity > 10000) return setError('Capacity must be a whole number between 2 and 10,000 players.')
+    if (!Number.isInteger(form.capacity) || form.capacity < 2 || form.capacity > 10000) return setError(`Capacity must be a whole number between 2 and 10,000 ${form.playerFormat === 'Solo' ? 'player' : 'team'} slots.`)
     if (form.entryType === 'free' && form.entryFeeMinor !== 0) return setError('Free tournaments must have a UGX 0 entry fee.')
     if (!Number.isSafeInteger(form.entryFeeMinor) || form.entryFeeMinor < 0 || !Number.isSafeInteger(form.prizePoolMinor) || form.prizePoolMinor < 0) return setError('Entry fees and prize pools must be whole-number UGX amounts.')
     if (form.entryType === 'paid' && form.entryFeeMinor < 1) return setError('Paid tournaments must have an entry fee of at least UGX 1.')
+    if (!playerFormats.includes(form.playerFormat)) return setError('Choose a player format supported by the selected game and mode.')
     if (![registrationOpen, registrationClose, checkInOpen, checkInClose, starts].every(Number.isFinite)) return setError('Enter all registration, check-in and start dates.')
     if (!(registrationOpen < registrationClose && registrationClose <= checkInOpen && checkInOpen < checkInClose && checkInClose <= starts)) return setError('Dates must follow this order: registration opens, registration closes, check-in opens, check-in closes, tournament starts.')
     if (rules.length === 0) return setError('Add at least one tournament rule.')
@@ -113,14 +110,14 @@ export function CreateTournamentDialog({ onClose, onSave }: { onClose: () => voi
           <label className="wide">TOURNAMENT NAME<input autoFocus maxLength={80} value={form.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Kampala Weekend Cup" required /></label>
           <label className="wide">DESCRIPTION<textarea rows={3} maxLength={500} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Describe the event for players" required /></label>
           <div className="admin-banner-field wide"><span>TOURNAMENT BANNER</span>{chosenGame && <GameArtwork game={chosenGame} bannerUrl={form.bannerUrl} />}<p>Optional banner URL is saved to banner_url. Leave it blank to use the bundled game-specific illustration.</p></div>
-          <label>GAME<select value={form.gameId} disabled={gamesLoading || availableGames.length === 0} onChange={e => { const nextGame = availableGames.find(game => game.slug === e.target.value); const nextFormats = playerFormatsByGame[nextGame?.id ?? ''] ?? ['Solo']; set('gameId', e.target.value); if (!nextFormats.includes(form.playerFormat)) set('playerFormat', nextFormats[0]); if (nextGame?.category !== 'Battle royale' && form.bracketFormat === 'Battle royale') set('bracketFormat', 'Single elimination') }}>{gamesLoading ? <option>Loading active games…</option> : availableGames.map(game => <option key={game.id} value={game.slug}>{game.name}</option>)}</select></label>
-          <label>MODE<input maxLength={50} value={form.mode} onChange={e => set('mode', e.target.value)} placeholder="e.g. Ranked" required /></label>
-          <label>PLAYER FORMAT<select value={playerFormats.includes(form.playerFormat) ? form.playerFormat : playerFormats[0]} onChange={e => set('playerFormat', e.target.value)}>{playerFormats.map(value => <option key={value}>{value}</option>)}</select></label>
+          <label>GAME<select value={form.gameId} disabled={gamesLoading || availableGames.length === 0} onChange={e => { const nextGame = availableGames.find(game => game.slug === e.target.value); const nextFormats = playerFormatsForGame(nextGame?.slug ?? e.target.value, form.mode); set('gameId', e.target.value); if (!nextFormats.includes(form.playerFormat)) set('playerFormat', nextFormats[0]); if (nextGame?.category !== 'Battle royale' && form.bracketFormat === 'Battle royale') set('bracketFormat', 'Single elimination') }}>{gamesLoading ? <option>Loading active games…</option> : availableGames.map(game => <option key={game.id} value={game.slug}>{game.name}</option>)}</select></label>
+          <label>MODE<input maxLength={50} value={form.mode} onChange={e => { const mode = e.target.value; const nextFormats = playerFormatsForGame(form.gameId, mode); set('mode', mode); if (!nextFormats.includes(form.playerFormat)) set('playerFormat', nextFormats[0]) }} placeholder="e.g. Ranked" required /></label>
+          <label>PLAYER FORMAT<select value={playerFormats.includes(form.playerFormat) ? form.playerFormat : playerFormats[0]} onChange={e => set('playerFormat', e.target.value as PlayerFormat)}>{playerFormats.map(value => <option key={value}>{value}</option>)}</select></label>
           <label>BRACKET FORMAT<select value={bracketFormats.includes(form.bracketFormat) ? form.bracketFormat : bracketFormats[0]} onChange={e => set('bracketFormat', e.target.value)}>{bracketFormats.map(value => <option key={value}>{value}</option>)}</select></label>
           <label>ENTRY TYPE<select value={form.entryType} onChange={e => { const entryType = e.target.value as TournamentDraftInput['entryType']; set('entryType', entryType); if (entryType === 'free') set('entryFeeMinor', 0) }}><option value="free">Free entry</option><option value="paid">Paid entry (draft only)</option></select></label>
           <label>ENTRY FEE <small>Whole UGX amount</small><input type="number" min={0} max={9007199254740991} step={1} value={form.entryFeeMinor} disabled={form.entryType === 'free'} onChange={e => set('entryFeeMinor', Number(e.target.value))} required /></label>
           <label>PRIZE POOL <small>Whole UGX amount</small><input type="number" min={0} max={9007199254740991} step={1} value={form.prizePoolMinor} onChange={e => set('prizePoolMinor', Number(e.target.value))} required /></label>
-          <label>CAPACITY<input type="number" min={2} max={10000} step={1} value={form.capacity} onChange={e => set('capacity', Number(e.target.value))} required /></label>
+          <label>{form.playerFormat === 'Solo' ? 'CAPACITY · INDIVIDUAL PLAYER SLOTS' : 'CAPACITY · TEAM SLOTS'}<input type="number" min={2} max={10000} step={1} value={form.capacity} onChange={e => set('capacity', Number(e.target.value))} required /></label>
           <label>REGISTRATION OPENS<input type="datetime-local" value={form.registrationOpensAt} onChange={e => set('registrationOpensAt', e.target.value)} required /></label>
           <label>REGISTRATION CLOSES<input type="datetime-local" value={form.registrationClosesAt} onChange={e => set('registrationClosesAt', e.target.value)} required /></label>
           <label>CHECK-IN OPENS<input type="datetime-local" value={form.checkInOpensAt} onChange={e => set('checkInOpensAt', e.target.value)} required /></label>

@@ -1,6 +1,7 @@
 import { games as artworkGames, type Game, type Tournament } from '../data/tournaments'
 import { getSupabaseClient } from '../lib/supabase'
 import type { TournamentDraftInput } from './tournamentDrafts'
+import { playerFormatsForGame, isPlayerFormat } from './tournamentFormats'
 
 export type SupabaseGame = Game & { slug: string; databaseId: string }
 export type TournamentRecord = Tournament & {
@@ -295,6 +296,9 @@ export async function createTournamentRecord(input: TournamentDraftInput): Promi
     .maybeSingle()
   if (gameError) throw gameError
   if (!game) throw new Error(`No active public.games row exists for ${input.gameId}. Refresh the game list and try again.`)
+  if (!isPlayerFormat(input.playerFormat) || !playerFormatsForGame(input.gameId, input.mode).includes(input.playerFormat)) {
+    throw new Error(`${input.playerFormat} is not supported for ${input.gameId} in ${input.mode || 'this mode'}. Choose one of the offered player formats.`)
+  }
 
   const formats: Record<string, string> = {
     'Single elimination': 'single_elimination',
