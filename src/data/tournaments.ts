@@ -4,7 +4,7 @@ export type Tournament = {
   id: string; gameId: string; title: string; format: string; start: string; dateLabel: string
   entryFee: number; prizePool: number; players: number | null; capacity: number; status: TournamentStatus
   description: string; rules: string[]; schedule: { time: string; label: string }[]
-  gameName?: string; bannerUrl?: string | null; prizeDescription?: string | null; isDatabaseRecord?: boolean
+  gameName?: string; bannerUrl?: string | null; prizeDescription?: string | null; registrationClosesAt?: string | null; isDatabaseRecord?: boolean
 }
 
 // These three titles are retained from the original frontend's mock tournament entries.

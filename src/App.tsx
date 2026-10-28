@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { AdminLayout, AdminPermissionGate, AdminProductionGate } from './admin/AdminLayout'
+import { AdminLayout, AdminPermissionGate } from './admin/AdminLayout'
 import { AdminOverview, AdminTournaments, AdminPlayers, AdminMatches, AdminFinance, AdminContent, AdminStaff, AdminSettings } from './admin/AdminPages'
 import { PageShell } from './components/PageShell'
 import { SupabaseConfigurationNotice } from './components/SupabaseConfigurationNotice'
@@ -28,7 +28,7 @@ export default function App() {
     <Route path="/login" element={<RoutedPage><AuthPage /></RoutedPage>} />
     <Route path="/register" element={<RoutedPage><AuthPage /></RoutedPage>} />
     <Route path="/profile" element={<RoutedPage><ProfilePage /></RoutedPage>} />
-    <Route path="/admin" element={import.meta.env.DEV ? <AdminLayout /> : <AdminProductionGate />}>
+    <Route path="/admin" element={<AdminLayout />}>
       <Route index element={<AdminPermissionGate permission="dashboard.view"><AdminOverview /></AdminPermissionGate>} />
       <Route path="tournaments" element={<AdminPermissionGate permission="tournaments.read"><AdminTournaments /></AdminPermissionGate>} />
       <Route path="players" element={<AdminPermissionGate permission="players.read"><AdminPlayers /></AdminPermissionGate>} />

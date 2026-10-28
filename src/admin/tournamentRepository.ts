@@ -93,6 +93,7 @@ function toTournament(row: TournamentRow): TournamentRecord {
     schedule,
     bannerUrl: row.banner_url,
     prizeDescription: row.prize_description,
+    registrationClosesAt: row.registration_closes_at,
     isDatabaseRecord: true,
   }
 }
@@ -128,6 +129,15 @@ type PublishTournamentResponse = {
   status?: string
 }
 
+export type RegistrationResult = {
+  ok: boolean
+  code: string
+  message: string
+  entry_id?: string
+  status?: string
+  slots_remaining?: number
+}
+
 export async function listMyTournamentDrafts(): Promise<{ userId: string; drafts: OwnedTournamentDraft[] }> {
   const supabase = getSupabaseClient()
   const { data: authData, error: authError } = await supabase.auth.getUser()
@@ -144,6 +154,23 @@ export async function listMyTournamentDrafts(): Promise<{ userId: string; drafts
     userId: authData.user.id,
     drafts: ((data ?? []) as unknown as TournamentRow[]).map(row => ({ ...toTournament(row), createdBy: authData.user.id })),
   }
+}
+
+export async function registerForTournament(tournamentId: string, gameAccountId: string): Promise<RegistrationResult> {
+  const supabase = getSupabaseClient()
+  const { data: authData, error: authError } = await supabase.auth.getUser()
+  if (authError) throw authError
+  if (!authData.user) return { ok: false, code: 'LOGIN_REQUIRED', message: 'Sign in before registering for a tournament.' }
+  const { data, error } = await supabase.rpc('register_for_tournament', {
+    p_tournament_id: tournamentId,
+    p_game_account_id: gameAccountId,
+    p_team_id: null,
+    p_rules_accepted: true,
+  })
+  if (error) throw error
+  const result = data as RegistrationResult | null
+  if (!result || typeof result.ok !== 'boolean') throw new Error('The registration service returned an invalid response.')
+  return result
 }
 
 export async function publishTournamentRecord(tournamentId: string): Promise<{ id: string; status: string }> {
