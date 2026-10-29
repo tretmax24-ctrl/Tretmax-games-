@@ -2,6 +2,12 @@
 
 This document records client contracts for reviewed Supabase operations. RPCs must return `{ ok, code, message, ... }`, enforce identity/role/deadlines in PostgreSQL, and never rely on hidden UI controls.
 
+## Official competition backend — deployed
+
+The reviewed single-elimination competition backend is **deployed in Supabase and committed to GitHub main**. For exact production signatures, error codes, staff/participant authorization, private versus public read behavior, and migrations, use [the official competition backend contract](./competition-backend-contract.md). It supersedes the historical competition proposal below. SQL integration tests passed, but true overlapping-session load tests and real signed-token browser integration are still pending. **Private evidence Storage uploads/downloads are not yet configured**; only restricted evidence-path references have been deployed.
+
+Battle-royale scoring, double elimination and round-robin match engines remain future phases; paid tournaments are not enabled.
+
 ## Existing
 
 - `publish_tournament(p_tournament_id uuid)` — Owner-only server operation. A successful result changes `draft` to `registration_open`. Paid events and invalid/expired schedules remain server-rejected.
@@ -40,7 +46,7 @@ The seven team/check-in migrations listed in [teams-checkin-backend.md](./teams-
 
 Every team/check-in operation must define ownership, organizer roles, UTC/server-time deadlines, idempotency, concurrency behavior, audit records, and denial codes. Frontend controls are not a security boundary.
 
-## Competition engine contracts for security review
+## Historical competition engine proposal (superseded by deployed single-elimination contract)
 
 The browser now contains deterministic bracket and battle-royale scoring algorithms for local previews and tests. They do not write records or replace server authorization. Required operations before a live bracket can be generated:
 

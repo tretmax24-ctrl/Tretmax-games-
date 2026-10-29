@@ -2,6 +2,10 @@
 
 The team/check-in migrations are now present in this checkout and deployed according to [teams-checkin-backend.md](./teams-checkin-backend.md). The SQL proposal below is retained as historical review context and must not be re-applied. Future changes must reconcile the live schema first.
 
+## Deployment update — official single-elimination brackets
+
+The six official-competition migrations are applied and present in GitHub main. The deployed RPCs for bracket generation, match scheduling, results, disputes, referee verification, forfeits, completion and bracket/schedule/standings reads are documented in [docs/competition-backend-contract.md](./competition-backend-contract.md). The checklist and SQL proposals further down are retained as historical context and should **not be re-applied**. Private evidence Storage bucket/policies, battle-royale scoring, real browser checks and true overlapping-session stress tests remain outstanding.
+
 ## Required schema/policy review
 
 1. Add or reconcile an Owner-only draft edit RPC and its restricted EXECUTE grant.
@@ -60,8 +64,8 @@ The reviewed migration must also define roster-size configuration per tournament
 
 For check-in, `check_in_tournament` should verify the signed-in user owns the solo entry or is an active member of the locked team, the tournament is in its configured check-in window, the entry is not withdrawn/disqualified/no-show, and then atomically set `checked_in_at` plus the existing `checked_in` status. `mark_entry_no_show` should be organizer/referee-only and reject calls before the deadline.
 
-## Competition engine proposal (not applied)
+## Historical competition engine proposal (partially superseded)
 
 The current `matches` table is not sufficient for bracket advancement, evidence review or disputes. A separate security-reviewed migration should add `tournament_brackets` (one per tournament), `tournament_bracket_matches` (round, match number, entry references, `next_match_id`, schedule, status, private room reference and winner), `match_result_submissions`, `match_disputes`, `tournament_scoring_rules` and `battle_royale_results`, plus an append-only `competition_audit_events` table. Unique constraints must prevent duplicate match positions, duplicate results per participant/round and duplicate tournament completion.
 
-All browser writes must be revoked from these base tables and exposed through the RPCs in [api-contracts.md](./api-contracts.md). Policies must limit private room references/evidence to assigned participants and authorized staff, enforce tournament roles, and lock terminal matches and completed tournaments. No part of this proposal has been applied.
+All browser writes must be revoked from these base tables and exposed through the RPCs in [api-contracts.md](./api-contracts.md). Policies must limit private room references/evidence to assigned participants and authorized staff, enforce tournament roles, and lock terminal matches and completed tournaments. The reviewed single-elimination subset has been applied; see the official competition contract above. Battle-royale scoring and private evidence file Storage remain undeployed.
